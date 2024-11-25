@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node app.js",
-    "postinstall": "apt-get update && apt-get install -y python3-pip python3-distutils python3-setuptools && pip3 install -r requirements.txt && npm install"
+    "postinstall": "python -m pip install --upgrade pip && pip install -r requirements.txt"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

@@ -9,10 +9,7 @@ const prisma = new PrismaClient();
 const app = express();
 
 // CORS configuration
-app.use(cors({
-    origin: process.env.FRONTEND_URL,
-    optionsSuccessStatus: 200
-}));
+app.use(cors());
 
 app.use(express.json());
 

@@ -6,7 +6,7 @@ const PredictionHistory = require('../models/PredictionHistory');
 
 class PredictionService {
     constructor() {
-        this.modelPath = path.join(__dirname, '../../ml/models/randomForest/model.py');
+        this.modelPath = path.join(__dirname, 'ml/models/randomForest/model.py');
     }
 
     async predict(features) {
@@ -86,7 +86,7 @@ class PredictionService {
     async getModelMetrics() {
         try {
             const pythonProcess = spawn('python', [
-                path.join(__dirname, '../../ml/utils/metrics.py')
+                path.join(__dirname, 'ml/utils/metrics.py')
             ]);
 
             return new Promise((resolve, reject) => {

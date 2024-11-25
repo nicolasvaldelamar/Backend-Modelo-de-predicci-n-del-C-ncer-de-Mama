@@ -7,7 +7,8 @@
     "node": ">=14.0.0"
   },
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "setup": "npm install && pip install -r requirements.txt"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

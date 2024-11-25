@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Prediction {
+  id          Int      @id @default(autoincrement())
+  features    Json     // Para almacenar el array de características
+  prediction  Int
+  tumorType   String   @map("tumor_type")
+  probability Float
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("predictions")
+}
+
+model ModelMetrics {
+  id                Int      @id @default(autoincrement())
+  accuracy          Float
+  precision         Float
+  recall           Float
+  f1Score          Float    @map("f1_score")
+  totalPredictions Int      @map("total_predictions")
+  lastUpdated      DateTime @default(now()) @updatedAt @map("last_updated")
+
+  @@map("model_metrics")
+}
+
+model FeatureImportance {
+  id          Int      @id @default(autoincrement())
+  feature     String   @unique
+  importance  Float
+  lastUpdated DateTime @default(now()) @updatedAt @map("last_updated")
+
+  @@map("feature_importance")
+} 

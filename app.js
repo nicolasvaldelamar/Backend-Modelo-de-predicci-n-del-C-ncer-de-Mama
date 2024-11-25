@@ -13,6 +13,90 @@ app.use(cors());
 
 app.use(express.json());
 
+// Configurar la ruta base del proyecto
+const PROJECT_ROOT = path.resolve(__dirname);
+const MODEL_PATH = path.join(PROJECT_ROOT, 'ml', 'models', 'randomForest', 'model.py');
+
+console.log('Ruta del modelo:', MODEL_PATH);
+
+// Endpoint para predicciones
+app.post('/predict', async (req, res) => {
+    const features = req.body.features;
+
+    if (!features || !Array.isArray(features) || features.length !== 9) {
+        return res.status(400).json({
+            error: 'Se requieren 9 características numéricas'
+        });
+    }
+
+    try {
+        // Verificar Python
+        const pythonVersionProcess = spawn('python3', ['--version']);
+        pythonVersionProcess.on('error', (err) => {
+            console.error('Error al ejecutar Python:', err);
+            throw new Error('Python no está disponible');
+        });
+
+        const pythonProcess = spawn('python3', [MODEL_PATH, features.join(',')], {
+            env: { 
+                ...process.env, 
+                PYTHONUNBUFFERED: '1',
+                PYTHONPATH: path.join(PROJECT_ROOT, 'ml')
+            }
+        });
+        
+        let result = '';
+        let error = '';
+
+        pythonProcess.stdout.on('data', (data) => {
+            console.log('Python stdout:', data.toString());
+            result += data.toString();
+        });
+
+        pythonProcess.stderr.on('data', (data) => {
+            console.error('Python stderr:', data.toString());
+            error += data.toString();
+        });
+
+        pythonProcess.on('close', async (code) => {
+            if (code !== 0) {
+                return res.status(500).json({
+                    error: 'Error al procesar la predicción',
+                    details: error,
+                    code: code
+                });
+            }
+
+            try {
+                const prediction = JSON.parse(result);
+                await prisma.prediction.create({
+                    data: {
+                        features: features,
+                        prediction: prediction.prediction,
+                        tumorType: prediction.tumor_type,
+                        probability: prediction.probability
+                    }
+                });
+
+                res.json(prediction);
+            } catch (e) {
+                console.error('Error procesando resultado:', e);
+                res.status(500).json({
+                    error: 'Error al procesar la respuesta',
+                    details: e.message
+                });
+            }
+        });
+
+    } catch (error) {
+        console.error('Error en el endpoint predict:', error);
+        res.status(500).json({
+            error: 'Error al ejecutar la predicción',
+            details: error.message
+        });
+    }
+});
+
 // Endpoint para obtener la importancia de características
 app.get('/feature-importance', async (req, res) => {
     try {
@@ -56,64 +140,6 @@ app.get('/feature-importance', async (req, res) => {
         // En caso de error, devolver los valores por defecto
         res.json(defaultFeatureImportance);
     }
-});
-
-// Endpoint para realizar predicciones
-app.post('/predict', async (req, res) => {
-    const features = req.body.features;
-
-    if (!features || !Array.isArray(features) || features.length !== 9) {
-        return res.status(400).json({
-            error: 'Se requieren 9 características numéricas'
-        });
-    }
-
-    const modelPath = path.join(__dirname, process.env.MODEL_PATH);
-    const pythonProcess = spawn('python', [modelPath, features.join(',')]);
-
-    let result = '';
-    let error = '';
-
-    pythonProcess.stdout.on('data', (data) => {
-        result += data.toString();
-    });
-
-    pythonProcess.stderr.on('data', (data) => {
-        error += data.toString();
-        console.error('Python Error:', error);
-    });
-
-    pythonProcess.on('close', async (code) => {
-        if (code !== 0) {
-            return res.status(500).json({
-                error: 'Error al procesar la predicción',
-                details: error
-            });
-        }
-
-        try {
-            const prediction = JSON.parse(result);
-            
-            // Guardar la predicción en la base de datos
-            await prisma.prediction.create({
-                data: {
-                    features: features,
-                    prediction: prediction.prediction,
-                    tumorType: prediction.tumor_type,
-                    probability: prediction.probability
-                }
-            });
-
-            console.log('Predicción guardada en la base de datos');
-            res.json(prediction);
-        } catch (e) {
-            console.error('Error al guardar en la base de datos:', e);
-            res.status(500).json({
-                error: 'Error al procesar la respuesta',
-                details: e.message
-            });
-        }
-    });
 });
 
 // Endpoint para obtener el historial de predicciones
@@ -180,7 +206,12 @@ app.get('/api/metrics', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-    console.log(`Servidor ejecutándose en el puerto ${PORT}`);
+    console.log(`Servidor ejecutándose en puerto ${PORT}`);
+    // Verificar instalación de Python
+    const pythonCheck = spawn('python3', ['--version']);
+    pythonCheck.stdout.on('data', (data) => {
+        console.log('Python version:', data.toString());
+    });
 });
 
 // Manejo de cierre limpio

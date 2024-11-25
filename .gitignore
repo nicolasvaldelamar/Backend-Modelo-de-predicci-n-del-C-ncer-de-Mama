@@ -4,9 +4,6 @@ node_modules/
 # Variables de entorno
 .env
 
-# Modelos de aprendizaje automático
-*.pkl
-
 # Caché de Python
 __pycache__/
 *.pyc
